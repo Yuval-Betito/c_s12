@@ -1,4 +1,5 @@
 # users/validators.py
+import hmac
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
 from django.contrib.auth import get_user_model
@@ -75,7 +76,7 @@ class PasswordHistoryValidator:
                     entered_hash = hmac.new(old_salt.encode(), password.encode(), hashlib.sha256).hexdigest()
                     if hmac.compare_digest(old_hash, entered_hash):
                         raise ValidationError(
-                            _("Password cannot match the last {0} passwords.").format(self.password_history),
+                            _(f"Password cannot match the last {self.password_history} passwords."),
                             code='password_used_before',
                         )
                 except ValueError:
