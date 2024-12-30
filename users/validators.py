@@ -1,22 +1,19 @@
 # users/validators.py
 import hmac
+import hashlib
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _
-from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
 import re
-
-User = get_user_model()
 
 class CustomPasswordValidator:
     """Validator for password strength."""
-    def __init__(self, config):
-        self.min_length = config.get("min_password_length", 10)
-        self.require_uppercase = config["password_requirements"].get("uppercase", True)
-        self.require_lowercase = config["password_requirements"].get("lowercase", True)
-        self.require_digits = config["password_requirements"].get("digits", True)
-        self.require_special = config["password_requirements"].get("special_characters", True)
-        self.dictionary_check = config.get("dictionary_check", True)
+    def __init__(self, min_length, require_uppercase, require_lowercase, require_digits, require_special_characters, dictionary_check):
+        self.min_length = min_length
+        self.require_uppercase = require_uppercase
+        self.require_lowercase = require_lowercase
+        self.require_digits = require_digits
+        self.require_special_characters = require_special_characters
+        self.dictionary_check = dictionary_check
 
     def validate(self, password, user=None):
         if len(password) < self.min_length:
@@ -43,14 +40,14 @@ class CustomPasswordValidator:
                 code='password_no_digit',
             )
         
-        if self.require_special and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+        if self.require_special_characters and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
             raise ValidationError(
                 _("Password must contain at least one special character."),
                 code='password_no_special',
             )
         
         if self.dictionary_check:
-            common_passwords = ["123456", "password", "qwerty"]  # ניתן להרחיב רשימה זו
+            common_passwords = ["123456", "password", "qwerty"]  # ניתן להוסיף עוד
             if password.lower() in common_passwords:
                 raise ValidationError(
                     _("Password cannot be a common password."),
@@ -64,8 +61,8 @@ class CustomPasswordValidator:
 
 class PasswordHistoryValidator:
     """Validator to prevent reuse of recent passwords."""
-    def __init__(self, config):
-        self.password_history = config.get("password_history", 3)
+    def __init__(self, password_history):
+        self.password_history = password_history
     
     def validate(self, password, user=None):
         if user:
