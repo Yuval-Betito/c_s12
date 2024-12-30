@@ -1,13 +1,19 @@
 from pathlib import Path
+import os
+import json
 
+# בסיס הפרויקט
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# סודי - ודאי לשמור על סודיות המפתח הזה ולא לחשוף אותו בקוד פומבי
 SECRET_KEY = "django-insecure-gl=b&u71jf7ix(s^b^+y8^!eiubw&i43$r+l%)yhw#!fju)(p@"
 
+# מצב פיתוח - יש לשנות ל-False בייצור
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = []  # יש לעדכן את זה עם הדומיינים שלך בייצור
 
+# אפליקציות מותקנות
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -18,6 +24,7 @@ INSTALLED_APPS = [
     "users",  # האפליקציה users
 ]
 
+# Middleware
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -28,8 +35,10 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
+# כתובות URL הראשיות
 ROOT_URLCONF = "Communication_LTD.urls"
 
+# תבניות
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -47,8 +56,10 @@ TEMPLATES = [
     },
 ]
 
+# WSGI
 WSGI_APPLICATION = "Communication_LTD.wsgi.application"
 
+# מסד נתונים
 DATABASES = {
     "default": {
         "ENGINE": "django.db.backends.sqlite3",
@@ -56,15 +67,43 @@ DATABASES = {
     }
 }
 
+# מודל משתמש מותאם
 AUTH_USER_MODEL = 'users.User'
 
+# הגדרת אימייל - יש לעדכן עם הפרטים שלך
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.your-email-provider.com'  # למשל: 'smtp.gmail.com'
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+EMAIL_HOST_USER = 'your_email@communication_ltd.com'
+EMAIL_HOST_PASSWORD = 'your_email_password'
+DEFAULT_FROM_EMAIL = 'no-reply@communication_ltd.com'
+
+# טעינת קובץ קונפיגורציה לסיסמאות
+PASSWORD_CONFIG_PATH = BASE_DIR / 'password_config.json'
+if os.path.exists(PASSWORD_CONFIG_PATH):
+    with open(PASSWORD_CONFIG_PATH, 'r', encoding='utf-8') as f:
+        PASSWORD_CONFIG = json.load(f)
+else:
+    PASSWORD_CONFIG = {
+        "min_length": 10,
+        "require_uppercase": True,
+        "require_lowercase": True,
+        "require_numbers": True,
+        "require_special": True,
+        "password_history": 3,
+        "prevent_dictionary": True,
+        "login_attempts": 3
+    }
+
+# אבטחת סיסמאות לפי קובץ הקונפיגורציה
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {"min_length": 10},  # אורך סיסמה מינימלי
+        "OPTIONS": {"min_length": PASSWORD_CONFIG.get("min_length", 10)},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -72,8 +111,10 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
+    # ניתן להוסיף כאן מחלקות אימות מותאמות אישית אם יש צורך
 ]
 
+# שפה וזמן
 LANGUAGE_CODE = "he"
 
 TIME_ZONE = "Asia/Jerusalem"
@@ -82,15 +123,16 @@ USE_I18N = True
 
 USE_TZ = True
 
-STATIC_URL = "static/"
+# סטאטיים
+STATIC_URL = "/static/"
 
-# הוספת לוגיקה לנתיב LOGOUT
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
+
+# הגדרות התחברות והתנתקות
+LOGIN_REDIRECT_URL = '/'  # דף הבית לאחר התחברות
 LOGOUT_REDIRECT_URL = 'login'  # מפנה לדף הלוגין לאחר התנתקות
 
-# נתיב לדף הבית לאחר התחברות
-LOGIN_REDIRECT_URL = '/'  # דף הבית לאחר התחברות
-
-# הוספת מייל לשליחת טוקנים
-DEFAULT_FROM_EMAIL = 'no-reply@communication_ltd.com'  # כתובת המייל לשליחת טוקנים
-
+# אוטומטית שדה ראשי
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
