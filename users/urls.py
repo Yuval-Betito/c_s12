@@ -1,13 +1,14 @@
 # users/urls.py
 from django.urls import path
-from .views import register, user_login, home, create_customer, forgot_password, reset_password  # Importing the views
+from . import views
 
-# URLs for the users app
 urlpatterns = [
-    path('register/', register, name='register'),  # User registration path
-    path('login/', user_login, name='login'),      # Login path
-    path('', home, name='home'),                   # Home path
-    path('customer/add/', create_customer, name='add_customer'),  # Add new customer
-    path('forgot_password/', forgot_password, name='forgot_password'),  # Forgot password
-    path('reset_password/', reset_password, name='reset_password'),  # Reset password
+    path('register/', views.register, name='register'),
+    path('login/', views.user_login, name='login'),
+    path('logout/', views.user_logout, name='logout'),
+    path('change-password/', views.CustomPasswordChangeView.as_view(), name='change_password'),
+    path('password-change-done/', views.password_change_done, name='password_change_done'),
+    path('create-customer/', views.create_customer, name='create_customer'),
+    path('forgot-password/', views.forgot_password, name='forgot_password'),
+    path('reset-password/', views.reset_password, name='reset_password'),
 ]
