@@ -1,12 +1,13 @@
+# users/urls.py
 from django.urls import path
-from .views import register, user_login, home, create_customer, forgot_password, reset_password  # ייבוא הפונקציות מ-views
+from .views import register, user_login, home, create_customer, forgot_password, reset_password  # Importing the views
 
-# URLs עבור האפליקציה users
+# URLs for the users app
 urlpatterns = [
-    path('register/', register, name='register'),  # נתיב לרישום משתמשים חדשים
-    path('login/', user_login, name='login'),      # נתיב לכניסה למערכת
-    path('', home, name='home'),                   # דף הבית (נתיב ריק)
-    path('customer/add/', create_customer, name='add_customer'),  # הוספת לקוח חדש
-    path('forgot_password/', forgot_password, name='forgot_password'),  # שכחתי סיסמה
-    path('reset_password/', reset_password, name='reset_password'),  # איפוס סיסמה
+    path('register/', register, name='register'),  # User registration path
+    path('login/', user_login, name='login'),      # Login path
+    path('', home, name='home'),                   # Home path
+    path('customer/add/', create_customer, name='add_customer'),  # Add new customer
+    path('forgot_password/', forgot_password, name='forgot_password'),  # Forgot password
+    path('reset_password/', reset_password, name='reset_password'),  # Reset password
 ]
