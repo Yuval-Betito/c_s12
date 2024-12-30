@@ -1,3 +1,4 @@
+# users/views.py
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.contrib.auth.views import PasswordChangeView
@@ -66,7 +67,6 @@ class CustomPasswordChangeView(PasswordChangeView):
     def form_valid(self, form):
         """Update the session after password change"""
         response = super().form_valid(form)
-        update_session_auth_hash(self.request, form.user)
         messages.success(self.request, "Your password was changed successfully.")
         return response
 
@@ -134,4 +134,5 @@ def reset_password(request):
     else:
         form = ResetPasswordForm()
     return render(request, 'users/reset_password.html', {'form': form})
+
 
