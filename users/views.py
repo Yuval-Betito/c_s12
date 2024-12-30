@@ -1,28 +1,24 @@
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login as django_login
-from django.contrib.auth.forms import PasswordChangeForm
-from django.contrib.auth import update_session_auth_hash
+from django.contrib.auth import authenticate, login as django_login, logout as django_logout
 from django.contrib.auth.views import PasswordChangeView
 from django.urls import reverse_lazy
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from .forms import RegisterForm, CustomerForm
+from .forms import RegisterForm, CustomerForm, CustomPasswordChangeForm, ResetPasswordForm
 from .models import User
 import hashlib
 import random
-import re
 from django.core.mail import send_mail
 from django.conf import settings
 
 # פונקציה לשליחת המייל עם הטוקן
-def send_reset_email(user):
+def send_reset_email(user, token):
     """Send reset email with the generated token."""
-    token = user.reset_token
     subject = "Password Reset Request"
     message = f"Use the following token to reset your password: {token}"
     send_mail(subject, message, settings.DEFAULT_FROM_EMAIL, [user.email])
 
-
+# View להתחברות משתמש
 def user_login(request):
     """Handle user login"""
     if request.method == 'POST':
@@ -38,7 +34,7 @@ def user_login(request):
             messages.error(request, "Invalid username or password. Please try again.")
     return render(request, 'users/login.html')
 
-
+# View להרשמת משתמש חדש
 def register(request):
     """Handle user registration"""
     if request.method == 'POST':
@@ -54,15 +50,16 @@ def register(request):
 
     return render(request, 'users/register.html', {'form': form})
 
-
+# View לדף הבית (נדרש התחברות)
 @login_required
 def home(request):
     """Render the home page"""
     return render(request, 'users/home.html')
 
-
+# View מותאם אישית לשינוי סיסמא
 class CustomPasswordChangeView(PasswordChangeView):
     """Custom view for handling password change"""
+    form_class = CustomPasswordChangeForm
     template_name = 'users/password_change.html'
     success_url = reverse_lazy('password_change_done')
 
@@ -73,13 +70,13 @@ class CustomPasswordChangeView(PasswordChangeView):
         messages.success(self.request, "Your password was changed successfully.")
         return response
 
-
+# View להצגת הודעת הצלחה לאחר שינוי סיסמא
 @login_required
 def password_change_done(request):
     """Display password change success message"""
     return render(request, 'users/password_change_done.html')
 
-
+# View ליצירת לקוח חדש (נדרש התחברות)
 @login_required
 def create_customer(request):
     """Handle creating a new customer"""
@@ -96,7 +93,7 @@ def create_customer(request):
 
     return render(request, 'users/create_customer.html', {'form': form})
 
-
+# View לפעולת שכחת סיסמא
 def forgot_password(request):
     """Handle forgot password functionality"""
     if request.method == 'POST':
@@ -110,45 +107,31 @@ def forgot_password(request):
             user.save()
             
             # Send reset token to email
-            send_reset_email(user)
+            send_reset_email(user, reset_token)
             
             messages.success(request, "Reset token sent to your email.")
         except User.DoesNotExist:
             messages.error(request, "No user found with this email.")
     return render(request, 'users/forgot_password.html')
 
-
-def validate_password(password):
-    """Check if the password meets the requirements."""
-    if len(password) < 10:
-        return False
-    if not re.search(r'[A-Z]', password):  # Uppercase letter
-        return False
-    if not re.search(r'[a-z]', password):  # Lowercase letter
-        return False
-    if not re.search(r'[0-9]', password):  # Digit
-        return False
-    if not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):  # Special character
-        return False
-    return True
-
-
+# View לאיפוס סיסמא
 def reset_password(request):
     """Handle reset password functionality"""
     if request.method == 'POST':
-        token = request.POST.get('token')
-        new_password = request.POST.get('new_password')
-        try:
-            user = User.objects.get(reset_token=token)
-            if validate_password(new_password):
+        form = ResetPasswordForm(request.POST)
+        if form.is_valid():
+            token = form.cleaned_data.get('token')
+            new_password = form.cleaned_data.get('new_password1')
+            try:
+                user = User.objects.get(reset_token=token)
                 user.set_password(new_password)
                 user.reset_token = None  # Clear the reset token
                 user.save()
                 messages.success(request, "Password reset successfully.")
                 return redirect('login')
-            else:
-                messages.error(request, "Password does not meet the requirements.")
-        except User.DoesNotExist:
-            messages.error(request, "Invalid reset token.")
-    return render(request, 'users/reset_password.html')
+            except User.DoesNotExist:
+                form.add_error('token', "Invalid reset token.")
+    else:
+        form = ResetPasswordForm()
+    return render(request, 'users/reset_password.html', {'form': form})
 
