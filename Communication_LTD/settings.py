@@ -56,7 +56,6 @@ DATABASES = {
     }
 }
 
-# הגדרת המודל המותאם אישית
 AUTH_USER_MODEL = 'users.User'
 
 AUTH_PASSWORD_VALIDATORS = [
@@ -94,14 +93,4 @@ LOGIN_REDIRECT_URL = '/'  # דף הבית לאחר התחברות
 # הוספת מייל לשליחת טוקנים
 DEFAULT_FROM_EMAIL = 'no-reply@communication_ltd.com'  # כתובת המייל לשליחת טוקנים
 
-# אם אתה לא רוצה לשלוח מיילים אמיתיים בשלב הפיתוח
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# הגבלת ניסיונות התחברות
-MAX_LOGIN_ATTEMPTS = 3  # מקסימום מספר ניסיונות התחברות
-
-# קריאת הגדרות קובץ JSON לניהול סיסמאות
-PASSWORD_CONFIG_FILE = BASE_DIR / 'password_config.json'
-
