@@ -1,13 +1,12 @@
 from django.urls import path
-from . import views
+from .views import register, user_login, home, create_customer, forgot_password, reset_password  # ייבוא הפונקציות מ-views
 
+# URLs עבור האפליקציה users
 urlpatterns = [
-    path('login/', views.user_login, name='login'),  # נתיב למסך התחברות
-    path('register/', views.register, name='register'),  # נתיב לרישום משתמש
-    path('forgot_password/', views.forgot_password, name='forgot_password'),  # שכחתי סיסמה
-    path('reset_password/', views.reset_password, name='reset_password'),  # איפוס סיסמה
-    path('password_change/', views.CustomPasswordChangeView.as_view(), name='password_change'),  # שינוי סיסמה
-    path('password_change_done/', views.password_change_done, name='password_change_done'),  # הודעה על שינוי סיסמה
-    path('add_customer/', views.create_customer, name='add_customer'),  # יצירת לקוח חדש
-    path('logout/', views.logout_view, name='logout'),  # התנתקות
+    path('register/', register, name='register'),  # נתיב לרישום משתמשים חדשים
+    path('login/', user_login, name='login'),      # נתיב לכניסה למערכת
+    path('', home, name='home'),                   # דף הבית (נתיב ריק)
+    path('customer/add/', create_customer, name='add_customer'),  # הוספת לקוח חדש
+    path('forgot_password/', forgot_password, name='forgot_password'),  # שכחתי סיסמה
+    path('reset_password/', reset_password, name='reset_password'),  # איפוס סיסמה
 ]
