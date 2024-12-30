@@ -1,75 +1,69 @@
+# users/forms.py
 from django import forms
+from django.contrib.auth.forms import UserCreationForm, PasswordChangeForm
 from .models import User, Customer
-import json
-import re
+from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
-from django.conf import settings  # לשימוש ב-BASE_DIR
-
-# פונקציה לבדוק סיסמאות לפי הקובץ password_config.json
-def validate_password_with_config(password):
-    """Validate password against the rules in password_config.json"""
-    with open(settings.BASE_DIR / 'password_config.json', 'r') as f:
-        config = json.load(f)
-
-    # בדיקות על בסיס קובץ התצורה
-    if len(password) < config['min_length']:
-        raise ValidationError(f"Password must be at least {config['min_length']} characters long.")
-    if config['require_uppercase'] and not re.search(r'[A-Z]', password):
-        raise ValidationError("Password must contain at least one uppercase letter.")
-    if config['require_lowercase'] and not re.search(r'[a-z]', password):
-        raise ValidationError("Password must contain at least one lowercase letter.")
-    if config['require_digit'] and not re.search(r'\d', password):
-        raise ValidationError("Password must contain at least one digit.")
-    if config['require_special'] and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
-        raise ValidationError("Password must contain at least one special character.")
+import re
 
 # טופס רישום משתמש
-class RegisterForm(forms.ModelForm):
-    password = forms.CharField(widget=forms.PasswordInput, label="Password")
-    confirm_password = forms.CharField(widget=forms.PasswordInput, label="Confirm Password")
+class RegisterForm(UserCreationForm):
+    email = forms.EmailField(required=True, label="Email")
 
     class Meta:
         model = User
-        fields = ['username', 'email', 'password']
+        fields = ['username', 'email', 'password1', 'password2']
 
-    def clean_password(self):
-        password = self.cleaned_data.get('password')
-        validate_password_with_config(password)  # בדיקת הסיסמה
-        return password
-
-    def clean(self):
-        cleaned_data = super().clean()
-        password = cleaned_data.get('password')
-        confirm_password = cleaned_data.get('confirm_password')
-        if password and password != confirm_password:
-            raise ValidationError("Passwords do not match.")
-        return cleaned_data
+    def clean_email(self):
+        email = self.cleaned_data.get('email')
+        if User.objects.filter(email=email).exists():
+            raise ValidationError("Email address already in use.")
+        return email
 
     def save(self, commit=True):
         user = super().save(commit=False)
-        password = self.cleaned_data.get('password')
-        user.set_password(password)  # הצפנת הסיסמה
+        user.email = self.cleaned_data['email']
         if commit:
             user.save()
         return user
 
-# טופס שינוי סיסמה
-class PasswordChangeCustomForm(forms.Form):
-    old_password = forms.CharField(widget=forms.PasswordInput, label="Current Password")
-    new_password = forms.CharField(widget=forms.PasswordInput, label="New Password")
-    confirm_new_password = forms.CharField(widget=forms.PasswordInput, label="Confirm New Password")
+# טופס שינוי סיסמה מותאם
+class CustomPasswordChangeForm(PasswordChangeForm):
+    def clean_new_password1(self):
+        new_password1 = self.cleaned_data.get('new_password1')
+        try:
+            validate_password(new_password1, self.user)
+        except ValidationError as e:
+            self.add_error('new_password1', e)
+        return new_password1
 
-    def clean_new_password(self):
-        new_password = self.cleaned_data.get('new_password')
-        validate_password_with_config(new_password)  # בדיקת סיסמה חדשה
-        return new_password
+# טופס איפוס סיסמה מותאם
+class ResetPasswordForm(forms.Form):
+    token = forms.CharField(max_length=100, required=True, label="Reset Token")
+    new_password1 = forms.CharField(
+        widget=forms.PasswordInput,
+        label="New Password",
+        help_text="Your password must be at least 10 characters long and contain at least one uppercase letter, one lowercase letter, one digit, and one special character."
+    )
+    new_password2 = forms.CharField(
+        widget=forms.PasswordInput,
+        label="Confirm New Password"
+    )
+    
+    def clean_new_password1(self):
+        password1 = self.cleaned_data.get('new_password1')
+        try:
+            validate_password(password1, self.user)
+        except ValidationError as e:
+            raise ValidationError(e)
+        return password1
 
     def clean(self):
         cleaned_data = super().clean()
-        new_password = cleaned_data.get('new_password')
-        confirm_new_password = cleaned_data.get('confirm_new_password')
-        if new_password and new_password != confirm_new_password:
-            raise ValidationError("New passwords do not match.")
+        password1 = cleaned_data.get('new_password1')
+        password2 = cleaned_data.get('new_password2')
+        if password1 and password2 and password1 != password2:
+            self.add_error('new_password2', "Passwords do not match.")
         return cleaned_data
 
 # טופס ליצירת לקוח חדש
@@ -81,10 +75,17 @@ class CustomerForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         # ערך ברירת מחדל לשדה phone_number
-        self.fields['phone_number'].widget.attrs.update({'value': '05'})
+        self.fields['phone_number'].widget.attrs.update({'placeholder': '05xxxxxxxx'})
+    
+    def clean_phone_number(self):
+        phone_number = self.cleaned_data.get('phone_number')
+        if not re.match(r'^05\d{8}$', phone_number):
+            raise ValidationError("Phone number must start with '05' and be followed by 8 digits.")
+        return phone_number
 
     def save(self, commit=True):
         customer = super().save(commit=False)
         if commit:
             customer.save()
         return customer
+
