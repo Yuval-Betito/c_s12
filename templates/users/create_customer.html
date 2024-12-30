@@ -1,29 +1,12 @@
-{% extends 'base.html' %}
-
-{% block title %}
-Add a New Customer
-{% endblock %}
+<!-- templates/users/create_customer.html -->
+{% extends "base.html" %}
 
 {% block content %}
-    <h1>Add a New Customer</h1>
-
-    <!-- הצגת הודעות מערכת -->
-    {% if messages %}
-        <ul>
-            {% for message in messages %}
-                <li>{{ message }}</li>
-            {% endfor %}
-        </ul>
-    {% endif %}
-
-    <form method="POST">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Add Customer</button>
-    </form>
-
-    {% if customer %}
-        <h2>A New Customer Has Been Successfully Added</h2>
-        <p>The new customer's name is: {{ customer.firstname }} {{ customer.lastname }}</p>
-    {% endif %}
+  <h2>יצירת לקוח חדש</h2>
+  <form method="post">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit">צור לקוח</button>
+  </form>
 {% endblock %}
+
