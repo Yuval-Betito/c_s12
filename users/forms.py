@@ -1,43 +1,27 @@
+from django import forms
+from .models import User, Customer
 import json
 import re
 from django.core.exceptions import ValidationError
-from django.conf import settings
-from .models import User
+from django.conf import settings  # לשימוש ב-BASE_DIR
 
 # פונקציה לבדוק סיסמאות לפי הקובץ password_config.json
-def validate_password_with_config(password, user=None):
+def validate_password_with_config(password):
     """Validate password against the rules in password_config.json"""
-    
-    # טוען את הגדרות הסיסמה מקובץ JSON
     with open(settings.BASE_DIR / 'password_config.json', 'r') as f:
         config = json.load(f)
 
     # בדיקות על בסיס קובץ התצורה
-    if len(password) < config['min_password_length']:
-        raise ValidationError(f"Password must be at least {config['min_password_length']} characters long.")
-    if config['password_requirements']['uppercase'] and not re.search(r'[A-Z]', password):
+    if len(password) < config['min_length']:
+        raise ValidationError(f"Password must be at least {config['min_length']} characters long.")
+    if config['require_uppercase'] and not re.search(r'[A-Z]', password):
         raise ValidationError("Password must contain at least one uppercase letter.")
-    if config['password_requirements']['lowercase'] and not re.search(r'[a-z]', password):
+    if config['require_lowercase'] and not re.search(r'[a-z]', password):
         raise ValidationError("Password must contain at least one lowercase letter.")
-    if config['password_requirements']['digits'] and not re.search(r'\d', password):
+    if config['require_digit'] and not re.search(r'\d', password):
         raise ValidationError("Password must contain at least one digit.")
-    if config['password_requirements']['special_characters'] and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
+    if config['require_special'] and not re.search(r'[!@#$%^&*(),.?":{}|<>]', password):
         raise ValidationError("Password must contain at least one special character.")
-    
-    # בדיקה שהסיסמה לא כוללת מילים מתוך מילון
-    if config.get('dictionary_check', False):
-        common_words = ['password', '123456', 'qwerty', 'admin', 'letmein']  # דוגמה למילים מהותיות שמומלץ להימנע מהן
-        if any(word in password.lower() for word in common_words):
-            raise ValidationError("Password contains common words that are too easy to guess.")
-    
-    # אם יש היסטוריית סיסמאות, נוודא שהסיסמה החדשה אינה חוזרת על סיסמאות קודמות
-    if user and user.password_history:
-        password_history = user.password_history.split(",")  # ההיסטוריה מופרדת בפסיק
-        if password in password_history:
-            raise ValidationError("You cannot use one of your last 3 passwords.")
-    
-    return password
-
 
 # טופס רישום משתמש
 class RegisterForm(forms.ModelForm):
@@ -69,7 +53,6 @@ class RegisterForm(forms.ModelForm):
             user.save()
         return user
 
-
 # טופס שינוי סיסמה
 class PasswordChangeCustomForm(forms.Form):
     old_password = forms.CharField(widget=forms.PasswordInput, label="Current Password")
@@ -88,17 +71,6 @@ class PasswordChangeCustomForm(forms.Form):
         if new_password and new_password != confirm_new_password:
             raise ValidationError("New passwords do not match.")
         return cleaned_data
-
-    def save(self, user, commit=True):
-        new_password = self.cleaned_data.get('new_password')
-        user.set_password(new_password)
-        user.password_history = user.password_history + "," + new_password  # עדכון היסטוריית הסיסמאות
-        if len(user.password_history.split(",")) > settings.PASSWORD_HISTORY:
-            user.password_history = ",".join(user.password_history.split(",")[-settings.PASSWORD_HISTORY:])  # שמירה על 3 סיסמאות אחרונות
-        if commit:
-            user.save()
-        return user
-
 
 # טופס ליצירת לקוח חדש
 class CustomerForm(forms.ModelForm):
