@@ -22,6 +22,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "users",  # האפליקציה users
+    "axes",   # התקנת django-axes להגבלת ניסיונות הכניסה
 ]
 
 # Middleware
@@ -33,6 +34,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "axes.middleware.AxesMiddleware",  # הוספת AxesMiddleware
 ]
 
 # כתובות URL הראשיות
@@ -86,13 +88,15 @@ if os.path.exists(PASSWORD_CONFIG_PATH):
         PASSWORD_CONFIG = json.load(f)
 else:
     PASSWORD_CONFIG = {
-        "min_length": 10,
-        "require_uppercase": True,
-        "require_lowercase": True,
-        "require_numbers": True,
-        "require_special": True,
+        "min_password_length": 10,
+        "password_requirements": {
+            "uppercase": True,
+            "lowercase": True,
+            "digits": True,
+            "special_characters": True
+        },
         "password_history": 3,
-        "prevent_dictionary": True,
+        "dictionary_check": True,
         "login_attempts": 3
     }
 
@@ -103,7 +107,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
-        "OPTIONS": {"min_length": PASSWORD_CONFIG.get("min_length", 10)},
+        "OPTIONS": {"min_length": PASSWORD_CONFIG.get("min_password_length", 10)},
     },
     {
         "NAME": "django.contrib.auth.password_validation.CommonPasswordValidator",
@@ -111,7 +115,23 @@ AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.NumericPasswordValidator",
     },
-    # ניתן להוסיף כאן מחלקות אימות מותאמות אישית אם יש צורך
+    {
+        "NAME": "users.validators.CustomPasswordValidator",
+        "OPTIONS": {
+            "min_length": PASSWORD_CONFIG.get("min_password_length", 10),
+            "require_uppercase": PASSWORD_CONFIG["password_requirements"].get("uppercase", True),
+            "require_lowercase": PASSWORD_CONFIG["password_requirements"].get("lowercase", True),
+            "require_digits": PASSWORD_CONFIG["password_requirements"].get("digits", True),
+            "require_special_characters": PASSWORD_CONFIG["password_requirements"].get("special_characters", True),
+            "dictionary_check": PASSWORD_CONFIG.get("dictionary_check", True),
+        },
+    },
+    {
+        "NAME": "users.validators.PasswordHistoryValidator",
+        "OPTIONS": {
+            "password_history": PASSWORD_CONFIG.get("password_history", 3),
+        },
+    },
 ]
 
 # שפה וזמן
@@ -136,3 +156,9 @@ LOGOUT_REDIRECT_URL = 'login'  # מפנה לדף הלוגין לאחר התנת�
 
 # אוטומטית שדה ראשי
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# הגדרות django-axes
+AXES_FAILURE_LIMIT = PASSWORD_CONFIG.get("login_attempts", 3)  # מספר הניסיונות המקסימלי
+AXES_COOLOFF_TIME = 1  # זמן ההמתנה בשעות
+AXES_LOCKOUT_CALLABLE = 'axes.handlers.database.AxesDatabaseHandler'  # ניתן להתאים לפי הצורך
+
