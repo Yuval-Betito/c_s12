@@ -1,18 +1,18 @@
 import os
 import hmac
 import hashlib
+import re
 import json
 from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager
 from django.core.exceptions import ValidationError
 from django.core.validators import RegexValidator
-from django.conf import settings
 
 # קריאת הגדרות הקונפיגורציה מקובץ JSON
-with open(settings.BASE_DIR / 'password_config.json') as f:
+with open('password_config.json') as f:
     config = json.load(f)
 
-# User Manager to handle custom user model creation
+
 class UserManager(BaseUserManager):
     """Custom manager for User model."""
     def create_user(self, username, email, password=None):
@@ -32,7 +32,7 @@ class UserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-# The custom User model
+
 class User(AbstractBaseUser):
     """Custom User model with HMAC + Salt for password handling."""
     username = models.CharField(max_length=50, unique=True)
@@ -40,7 +40,7 @@ class User(AbstractBaseUser):
     is_active = models.BooleanField(default=True)
     is_admin = models.BooleanField(default=False)
     reset_token = models.CharField(max_length=100, blank=True, null=True)  # Token for password reset
-    password_history = models.JSONField(default=list)  # Field for storing password history
+    password_history = models.JSONField(default=list)  # שדה לשמירת היסטוריית סיסמאות
 
     objects = UserManager()
 
@@ -58,13 +58,12 @@ class User(AbstractBaseUser):
             new_password = f'{salt}${hashed_password}'  # Save salt and hash in the format: salt$hashed_password
             
             # Check if the new password matches the recent password history
-            if any(hmac.compare_digest(old.split('$')[1], hashed_password) for old in self.password_history[-config["password_history"]:]): 
+            if any(hmac.compare_digest(old.split('$')[1], hashed_password) for old in self.password_history[-config["password_history"]:]):
                 raise ValueError("Password cannot match the last 3 passwords.")
             
             # Update password and history
             self.password = new_password
             self.password_history.append(new_password)
-            # Maintain only the last N passwords (based on config)
             self.password_history = self.password_history[-config["password_history"]:]
 
     def check_password(self, raw_password):
@@ -95,9 +94,10 @@ class User(AbstractBaseUser):
         if config["password_requirements"]["special_characters"] and not any(c in "!@#$%^&*(),.?\":{}|<>" for c in password):
             raise ValidationError("Password must contain at least one special character.")
 
-        # Check if the password is in a dictionary of common passwords
+        # אם נדרש מניעת מילים מתוך מילון, נוכל לבדוק את הסיסמה במילון (תוכנית חיצונית או רשימה מוגדרת)
         if config["dictionary_check"]:
-            common_passwords = ["123456", "password", "qwerty"]  # Example list
+            # לדוגמה, נוודא שהסיסמה לא כוללת את המילים השכיחות ביותר:
+            common_passwords = ["123456", "password", "qwerty"]  # דוגמה
             if password in common_passwords:
                 raise ValidationError("Password cannot be a common password.")
         
@@ -106,10 +106,10 @@ class User(AbstractBaseUser):
 
     @property
     def is_staff(self):
-        """Check if the user has admin privileges.""" 
+        """Check if the user has admin privileges."""
         return self.is_admin
 
-# The Customer model (unchanged)
+
 class Customer(models.Model):
     """Model for storing customer details."""
     firstname = models.CharField(max_length=50)
